@@ -1,0 +1,61 @@
+<?php
+/**
+ * @file
+ *
+ * tag_user module file
+ */
+
+/**
+ * Implements hook_user_tagable_widgets().
+ *
+ * @return array
+ */
+function tag_user_user_tagable_widgets() {
+  return array(
+    'text_textfield',
+    'text_textarea',
+    'text_textarea_with_summary',
+  );
+}
+
+/**
+ * Implements hook_field_widget_info_alter().
+ *
+ * @param $info
+ */
+function tag_user_field_widget_info_alter(&$info) {
+  foreach (module_invoke_all('user_tagable_widgets') as $widget) {
+    $info[$widget]['label'] .= " (with user tagging)";
+  }
+}
+
+/**
+ * Implements hook_field_widget_form_alter().
+ *
+ * @param $element
+ * @param $form_state
+ * @param $context
+ */
+function tag_user_field_widget_form_alter(&$element, &$form_state, $context) {
+//function tag_user_field_widget_properties_alter(&$widget, $context) {
+  $widgets = module_invoke_all('user_tagable_widgets');
+  if (in_array($context['instance']['widget']['type'], $widgets)) {
+    $element['#default_value'] = 'hi';
+    $element['#attached']['js'] = array(
+      drupal_get_path('module', 'tag_user') . '/tag_user.js',
+    );
+    //drupal_add_library('system', 'drupal.autocomplete');
+    $element['#attributes']['class'][] = 'form-tag-user';
+
+    $attributes = array();
+    $attributes['type'] = 'hidden';
+    $attributes['id'] = $element['#attributes']['id'] . '-tag-user';
+    // TODO be careful here with subdomains and url()
+    $attributes['value'] = url('user/autocomplete', array('absolute' => TRUE));
+    $attributes['disabled'] = 'disabled';
+    $attributes['class'][] = 'tag-user';
+    $element['#field_suffix'] = '<input' . drupal_attributes($attributes) . ' />';
+    dpm($element);
+
+  }
+}
