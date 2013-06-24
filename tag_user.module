@@ -68,11 +68,12 @@ function tag_user_field_widget_form_alter(&$element, &$form_state, $context) {
 
 function tag_user_append_autocomplete($content, $element) {
   if ($element['#type'] != 'text_format') {
+    global $base_url;
     $attributes = array();
     $attributes['type'] = 'hidden';
     $attributes['id'] = 'tag-user-autocomplete';
     // TODO be careful here with subdomains and url()
-    $attributes['value'] = url('user/autocomplete', array('absolute' => TRUE));
+    $attributes['value'] = url($base_url . '/user/autocomplete', array('absolute' => TRUE));
     $attributes['disabled'] = 'disabled';
     $attributes['class'][] = 'tag-user';
     $content .= '<input' . drupal_attributes($attributes) . ' />';

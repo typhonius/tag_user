@@ -61,13 +61,42 @@
 
         $input
             .keydown(function (event) { return ac.onkeydown(this, event); })
-            //.keyup(function (event) { ac.onkeyup(this, event); });
-            .keypress(function (event) { ac.onkeyup(this, event); });
+            .keyup(function (event) { ac.onkeyup(this, event); })
+            .keypress(function (event) { ac.onkeypress(this, event); });
 // add in the keyup for normal things and keypress for 'default'
         // keyup needs delete
         //.blur(function () { ac.hidePopup(); ac.db.cancel(); });
 
     };
+
+    /**
+     * Handler for the "keypress" event.
+     */
+    Drupal.tag_userAC.prototype.onkeypress = function (input, e) {
+        if (!e) {
+            e = window.event;
+        }
+        switch (e.keyCode) {
+            case 64: // @
+            case 43: // +
+                console.log('triggered selector');
+                Drupal.settings.tag_user.tagging = true;
+
+            default: // All other keys.
+                if (input.value.length > 0 && !input.readOnly) {
+                    if (Drupal.settings.tag_user.tagging) {
+                        // check if empty if so don't include + or @
+                        Drupal.settings.tag_user.tagged_user += String.fromCharCode(e.which);
+                        this.populatePopup();
+                    }
+                }
+                else {
+                    this.hidePopup(e.keyCode);
+                }
+                return true;
+        }
+    };
+
 
     /**
      * Handler for the "keydown" event.
@@ -123,28 +152,23 @@
                 this.hidePopup(e.keyCode);
                 return true;
 
-            case 64: // @
-            case 43: // +
-                console.log('triggered selector');
-                Drupal.settings.tag_user.tagging = true;
-
-//            case 8: // Backspace
-//                if (Drupal.settings.tag_user.tagging == true) {
-//                    console.log('got here');
-//                    Drupal.settings.tag_user.tagged_user.slice(0,-1);
-//                    console.log(Drupal.settings.tag_user.tagged_user);
-//                    if (!Drupal.settings.tag_user.tagged_user.length) {
-//                        Drupal.settings.tag_user.tagging = false;
-//                    }
-//                }
+            case 8: // Backspace
+                if (Drupal.settings.tag_user.tagging == true) {
+                    console.log('got here');
+                    Drupal.settings.tag_user.tagged_user = Drupal.settings.tag_user.tagged_user.slice(0, -1);
+                    console.log(Drupal.settings.tag_user.tagged_user);
+                    if (!Drupal.settings.tag_user.tagged_user.length) {
+                        Drupal.settings.tag_user.tagging = false;
+                    }
+                }
 
             default: // All other keys.
                 if (input.value.length > 0 && !input.readOnly) {
-                    if (Drupal.settings.tag_user.tagging) {
-                        // check if empty if so don't include + or @
-                      Drupal.settings.tag_user.tagged_user += String.fromCharCode(e.which);
-                      this.populatePopup();
-                    }
+//                    if (Drupal.settings.tag_user.tagging) {
+//                        // check if empty if so don't include + or @
+//                      Drupal.settings.tag_user.tagged_user += String.fromCharCode(e.which);
+//                      this.populatePopup();
+//                    }
                 }
                 else {
                     this.hidePopup(e.keyCode);
