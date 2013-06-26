@@ -1,13 +1,6 @@
-/**
- * Created with JetBrains PhpStorm.
- * User: adam.malone
- * Date: 23/6/13
- * Time: 23:57 28
- * To change this template use File | Settings | File Templates.
- */
 
 (function ($) {
-
+// TODO can we use tagged user and tagging like db is used in this file
     /**
      * Attaches the autocomplete behavior to all required fields.
      */
@@ -62,10 +55,8 @@
         $input
             .keydown(function (event) { return ac.onkeydown(this, event); })
             .keyup(function (event) { ac.onkeyup(this, event); })
-            .keypress(function (event) { ac.onkeypress(this, event); });
-// add in the keyup for normal things and keypress for 'default'
-        // keyup needs delete
-        //.blur(function () { ac.hidePopup(); ac.db.cancel(); });
+            .keypress(function (event) { ac.onkeypress(this, event); })
+            .blur(function () { ac.hidePopup(); ac.db.cancel(); });
 
     };
 
@@ -77,6 +68,7 @@
             e = window.event;
         }
         switch (e.keyCode) {
+            //TODO allow the user to alter these
             case 64: // @
             case 43: // +
                 console.log('triggered selector');
@@ -148,7 +140,7 @@
             case 9:  // Tab.
             case 13: // Enter.
             case 27: // Esc.
-                Drupal.settings.tag_user.tagging = false;
+                //Drupal.settings.tag_user.tagging = false;
                 this.hidePopup(e.keyCode);
                 return true;
 
@@ -160,6 +152,9 @@
                     if (!Drupal.settings.tag_user.tagged_user.length) {
                         Drupal.settings.tag_user.tagging = false;
                     }
+                    else {
+                        this.populatePopup();
+                    }
                 }
 
             default: // All other keys.
@@ -167,7 +162,7 @@
 //                    if (Drupal.settings.tag_user.tagging) {
 //                        // check if empty if so don't include + or @
 //                      Drupal.settings.tag_user.tagged_user += String.fromCharCode(e.which);
-//                      this.populatePopup();
+//
 //                    }
                 }
                 else {
@@ -180,11 +175,12 @@
 //    /**
 //     * Puts the currently highlighted suggestion into the autocomplete field.
 //     */
-//    Drupal.jsAC.prototype.select = function (node) {
+    Drupal.tag_userAC.prototype.select = function (node) {
     // change the tagged user var to the value and then replace that value with
     // the link
-//        this.input.value = $(node).data('autocompleteValue');
-//    };
+        console.log(node);
+        this.input.value = $(node).data('autocompleteValue');
+    };
 
     /**
      * Highlights the next suggestion.
@@ -236,6 +232,7 @@
      */
     Drupal.tag_userAC.prototype.hidePopup = function (keycode) {
         // Select item if the right key or mousebutton was pressed.
+        // TODO what about enter
         if (this.selected && ((keycode && keycode != 46 && keycode != 8 && keycode != 27) || !keycode)) {
             this.input.value = $(this.selected).data('autocompleteValue');
         }
@@ -261,7 +258,7 @@
             $(this.popup).remove();
         }
         this.selected = false;
-        this.popup = $('<div id="tag-user"></div>')[0];
+        this.popup = $('<div id="autocomplete"></div>')[0];
         this.popup.owner = this;
         $(this.popup).css({
             top: parseInt(position.top + this.input.offsetHeight, 10) + 'px',
@@ -292,6 +289,7 @@
         for (key in matches) {
             $('<li></li>')
                 .html($('<div></div>').html(matches[key]))
+                // Perhaps give more information TODO add picture?
                 .mousedown(function () { ac.select(this); })
                 .mouseover(function () { ac.highlight(this); })
                 .mouseout(function () { ac.unhighlight(this); })
@@ -389,7 +387,8 @@
      * Cancels the current autocomplete request.
      */
     Drupal.tag_userACDB.prototype.cancel = function () {
-        Drupal.settings.tag_user.tagging = false;
+        // TODO not sure if this is a good or bad idea.
+        //Drupal.settings.tag_user.tagging = false;
         if (this.owner) this.owner.setStatus('cancel');
         if (this.timer) clearTimeout(this.timer);
         this.searchString = '';

@@ -6,6 +6,53 @@
  */
 
 /**
+ * Implements hook_menu().
+ *
+ * @return mixed
+ */
+function tag_user_menu() {
+  $items['tag_user/autocomplete'] = array(
+    'title' => 'Tag User autocomplete',
+    'page callback' => 'tag_user_autocomplete',
+    'access callback' => 'user_access',
+    'access arguments' => array('access user profiles'),
+    'type' => MENU_CALLBACK,
+  );
+
+  return $items;
+}
+
+/**
+ * Menu callback from tag_user_menu().
+ *
+ * @param $string
+ */
+function tag_user_autocomplete($string) {
+  $matches = array();
+  if ($string) {
+    $result = db_select('users')->fields('users', array('picture', 'name'))->condition('name', db_like($string) . '%', 'LIKE')->range(0, 10)->execute();
+    foreach ($result as $user) {
+      // TODO dep on image to make this faster?
+      if ($user->picture && module_exists('image')) {
+        $picture = db_select('file_managed')->fields('file_managed', array('uri'))->condition('fid', ($user->picture), '=')->execute()->fetchField();
+      }
+      else {
+        $picture = variable_get('user_picture_default', '');
+      }
+      if (file_valid_uri($picture)) {
+        $themed_picture = theme('image_style', array('style_name' => 'tag_user_autocomplete_icon', 'path' => $picture));
+      }
+      else {
+        // TODO need css or something here to change size
+        $themed_picture = theme('image', array('path' => $picture));
+      }
+      $matches[$user->name] = $themed_picture . check_plain($user->name);
+    }
+  }
+  drupal_json_output($matches);
+}
+
+/**
  * Implements hook_user_tagable_widgets().
  *
  * @return array
@@ -73,10 +120,37 @@ function tag_user_append_autocomplete($content, $element) {
     $attributes['type'] = 'hidden';
     $attributes['id'] = 'tag-user-autocomplete';
     // TODO be careful here with subdomains and url()
-    $attributes['value'] = url($base_url . '/user/autocomplete', array('absolute' => TRUE));
+    // TODO may need new path for image callback
+    $attributes['value'] = url($base_url . '/tag_user/autocomplete', array('absolute' => TRUE));
     $attributes['disabled'] = 'disabled';
     $attributes['class'][] = 'tag-user';
     $content .= '<input' . drupal_attributes($attributes) . ' />';
   }
   return ($content);
 }
+
+/**
+ * Implement hook_image_default_styles().
+ * @return array
+ */
+function tag_user_image_default_styles() {
+  $styles = array();
+
+  $styles['tag_user_autocomplete_icon'] = array(
+    'label' => 'Tag User icon',
+    'effects' => array(
+      array(
+        'name' => 'image_scale',
+        'data' => array(
+          'width' => 25,
+          'height' => 25,
+          'upscale' => 1,
+        ),
+        'weight' => 0,
+      ),
+    ),
+  );
+
+  return $styles;
+}
+
