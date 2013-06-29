@@ -8,18 +8,15 @@
         attach: function (context, settings) {
             var acdb = [];
             $('input.tag-user', context).once('tag-user', function () {
+                //console.log(this);
                 var uri = this.value;
-                console.log(uri);
                 if (!acdb[uri]) {
                     acdb[uri] = new Drupal.tag_userACDB(uri);
                 }
-                console.log(this);
                 // #tag-user
                 var $input = $('#' + this.id.substr(0, this.id.length - 13))
                     .attr('autocomplete', 'OFF')
                     .attr('aria-autocomplete', 'list');
-                console.log($input);
-                // id is now #tag-user
 
                 $($input.form).submit(Drupal.tag_userSubmit);
                 $input.parent()
@@ -48,15 +45,14 @@
     Drupal.tag_userAC = function ($input, db) {
         var ac = this;
         this.input = $input;
-        console.log($input);
         this.ariaLive = $('#' + this.input.id + '-autocomplete-aria-live');
         this.db = db;
 
         $input
             .keydown(function (event) { return ac.onkeydown(this, event); })
             .keyup(function (event) { ac.onkeyup(this, event); })
-            .keypress(function (event) { ac.onkeypress(this, event); })
-            .blur(function () { ac.hidePopup(); ac.db.cancel(); });
+            .keypress(function (event) { ac.onkeypress(this, event); });
+           // .blur(function () { ac.hidePopup(); ac.db.cancel(); });
 
     };
 
@@ -68,10 +64,8 @@
             e = window.event;
         }
         switch (e.keyCode) {
-            //TODO allow the user to alter these
             case 64: // @
             case 43: // +
-                console.log('triggered selector');
                 Drupal.settings.tag_user.tagging = true;
 
             default: // All other keys.
@@ -86,6 +80,7 @@
                     this.hidePopup(e.keyCode);
                 }
                 return true;
+
         }
     };
 
@@ -94,22 +89,25 @@
      * Handler for the "keydown" event.
      */
     Drupal.tag_userAC.prototype.onkeydown = function (input, e) {
-        console.log('keydown');
         if (!e) {
             e = window.event;
         }
         switch (e.keyCode) {
             case 40: // down arrow.
-                console.log('down arrow');
                 this.selectDown();
                 return false;
             case 38: // up arrow.
-                console.log('up arrow');
                 this.selectUp();
                 return false;
-            default: // All other keys.
+            case 13: // enter
+                if (input.value.length > 0 && !input.readOnly) {
+                    if (Drupal.settings.tag_user.tagging) {
+                        this.hidePopup(e.keyCode);
+                        return false;
+                    }
+                }
 
-                console.log(e.keyCode);
+            default: // All other keys.
                 return true;
         }
     };
@@ -121,7 +119,6 @@
         if (!e) {
             e = window.event;
         }
-        console.log(e.keyCode);
         switch (e.keyCode) {
             case 16: // Shift.
             case 17: // Ctrl.
@@ -139,16 +136,12 @@
 
             case 9:  // Tab.
             case 13: // Enter.
-            case 27: // Esc.
-                //Drupal.settings.tag_user.tagging = false;
-                this.hidePopup(e.keyCode);
+            case 27: // Esc. // TODO allow it to clear the thing on escape
                 return true;
 
             case 8: // Backspace
                 if (Drupal.settings.tag_user.tagging == true) {
-                    console.log('got here');
                     Drupal.settings.tag_user.tagged_user = Drupal.settings.tag_user.tagged_user.slice(0, -1);
-                    console.log(Drupal.settings.tag_user.tagged_user);
                     if (!Drupal.settings.tag_user.tagged_user.length) {
                         Drupal.settings.tag_user.tagging = false;
                     }
@@ -157,28 +150,18 @@
                     }
                 }
 
-            default: // All other keys.
-                if (input.value.length > 0 && !input.readOnly) {
-//                    if (Drupal.settings.tag_user.tagging) {
-//                        // check if empty if so don't include + or @
-//                      Drupal.settings.tag_user.tagged_user += String.fromCharCode(e.which);
-//
-//                    }
-                }
-                else {
-                    this.hidePopup(e.keyCode);
-                }
-                return true;
+                    default: // All other keys.
+                        return true;
+
         }
     };
 
-//    /**
-//     * Puts the currently highlighted suggestion into the autocomplete field.
-//     */
+    /**
+     * Puts the currently highlighted suggestion into the autocomplete field.
+     */
     Drupal.tag_userAC.prototype.select = function (node) {
     // change the tagged user var to the value and then replace that value with
     // the link
-        console.log(node);
         this.input.value = $(node).data('autocompleteValue');
     };
 
@@ -234,7 +217,9 @@
         // Select item if the right key or mousebutton was pressed.
         // TODO what about enter
         if (this.selected && ((keycode && keycode != 46 && keycode != 8 && keycode != 27) || !keycode)) {
-            this.input.value = $(this.selected).data('autocompleteValue');
+            var text = this.input[0].value;
+            text = text.replace(Drupal.settings.tag_user.tagged_user, $(this.selected).data('autocompleteValue'));
+            this.input[0].value = text;
         }
         // Hide popup.
         var popup = this.popup;
@@ -289,7 +274,6 @@
         for (key in matches) {
             $('<li></li>')
                 .html($('<div></div>').html(matches[key]))
-                // Perhaps give more information TODO add picture?
                 .mousedown(function () { ac.select(this); })
                 .mouseover(function () { ac.highlight(this); })
                 .mouseout(function () { ac.unhighlight(this); })
