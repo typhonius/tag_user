@@ -87,11 +87,13 @@ function tag_user_field_widget_form_alter(&$element, &$form_state, $context) {
 //function tag_user_field_widget_properties_alter(&$widget, $context) {
   $widgets = module_invoke_all('user_tagable_widgets');
   if (in_array($context['instance']['widget']['type'], $widgets)) {
-    $element['#default_value'] = 'hi';
     // Add the autocomplete library to steal its functions
+    // We're currently using a lot of what it does but altered, we may not
+    // be able to use this unless there are functions we haven't broken
     drupal_add_library('system', 'drupal.autocomplete');
     $element['#attached']['js'] = array(
       drupal_get_path('module', 'tag_user') . '/tag_user.js',
+      // Eventually alter the Drupal.settings... in js for an object instantiated in the js
       array(
         'type' => 'setting',
         'data' => array('tag_user' => array('tagging' => FALSE, 'tagged_user' => '')),
@@ -101,14 +103,7 @@ function tag_user_field_widget_form_alter(&$element, &$form_state, $context) {
     $element['#attributes']['id'][] = 'tag-user';
     $element['#attributes']['class'][] = 'form-autocomplete';
 
-
-    // TODO Add in our own theme function so we don't have to do a suffix
-    // But we'd have to pretty much copy core's implementation and plug it in.
-    // $element['#theme'] = 'tag_user_widget';
-    //$element['#field_suffix'] = '<input' . drupal_attributes($attributes) . ' />';
-
     $element['#post_render'] = array('tag_user_append_autocomplete');
-    //$element['#theme_wrappers'] = array('tag_user_append_autocomplete');
   }
 }
 
@@ -120,7 +115,6 @@ function tag_user_append_autocomplete($content, $element) {
     $attributes['type'] = 'hidden';
     $attributes['id'] = 'tag-user-autocomplete';
     // TODO be careful here with subdomains and url()
-    // TODO may need new path for image callback
     $attributes['value'] = url($base_url . '/tag_user/autocomplete', array('absolute' => TRUE));
     $attributes['disabled'] = 'disabled';
     $attributes['class'][] = 'tag-user';

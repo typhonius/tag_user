@@ -8,7 +8,6 @@
         attach: function (context, settings) {
             var acdb = [];
             $('input.tag-user', context).once('tag-user', function () {
-                //console.log(this);
                 var uri = this.value;
                 if (!acdb[uri]) {
                     acdb[uri] = new Drupal.tag_userACDB(uri);
@@ -63,6 +62,8 @@
         if (!e) {
             e = window.event;
         }
+        // TODO we really need to instead of detecting keys, detect what's in the field and go from there
+        console.log(input.value);
         switch (e.keyCode) {
             case 64: // @
             case 43: // +
@@ -136,7 +137,11 @@
 
             case 9:  // Tab.
             case 13: // Enter.
+                return true;
             case 27: // Esc. // TODO allow it to clear the thing on escape
+                Drupal.settings.tag_user.tagged_user = "";
+                Drupal.settings.tag_user.tagging = false;
+                this.hidePopup();
                 return true;
 
             case 8: // Backspace
@@ -220,6 +225,8 @@
             var text = this.input[0].value;
             text = text.replace(Drupal.settings.tag_user.tagged_user, $(this.selected).data('autocompleteValue'));
             this.input[0].value = text;
+            Drupal.settings.tag_user.tagged_user = "";
+            Drupal.settings.tag_user.tagging = false;
         }
         // Hide popup.
         var popup = this.popup;
