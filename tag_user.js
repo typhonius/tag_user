@@ -49,42 +49,10 @@
 
         $input
             .keydown(function (event) { return ac.onkeydown(this, event); })
-            .keyup(function (event) { ac.onkeyup(this, event); })
-            .keypress(function (event) { ac.onkeypress(this, event); });
+            .keyup(function (event) { ac.onkeyup(this, event); });
            // .blur(function () { ac.hidePopup(); ac.db.cancel(); });
 
     };
-
-    /**
-     * Handler for the "keypress" event.
-     */
-    Drupal.tag_userAC.prototype.onkeypress = function (input, e) {
-        if (!e) {
-            e = window.event;
-        }
-        // TODO we really need to instead of detecting keys, detect what's in the field and go from there
-        console.log(input.value);
-        switch (e.keyCode) {
-            case 64: // @
-            case 43: // +
-                Drupal.settings.tag_user.tagging = true;
-
-            default: // All other keys.
-                if (input.value.length > 0 && !input.readOnly) {
-                    if (Drupal.settings.tag_user.tagging) {
-                        // check if empty if so don't include + or @
-                        Drupal.settings.tag_user.tagged_user += String.fromCharCode(e.which);
-                        this.populatePopup();
-                    }
-                }
-                else {
-                    this.hidePopup(e.keyCode);
-                }
-                return true;
-
-        }
-    };
-
 
     /**
      * Handler for the "keydown" event.
@@ -144,20 +112,24 @@
                 this.hidePopup();
                 return true;
 
-            case 8: // Backspace
-                if (Drupal.settings.tag_user.tagging == true) {
-                    Drupal.settings.tag_user.tagged_user = Drupal.settings.tag_user.tagged_user.slice(0, -1);
-                    if (!Drupal.settings.tag_user.tagged_user.length) {
-                        Drupal.settings.tag_user.tagging = false;
-                    }
-                    else {
-                        this.populatePopup();
+            default: // All other keys.
+                // Get the cursor position and check if 30 chars before contains
+                // a @ or + (user defined eventually)
+                var cursor = input.selectionStart;
+                var last30 = input.value.substr((Math.max(cursor - 30, 0)), cursor);
+                var tags = "@,+";
+                tags = tags.split(",");
+                for (var key in tags) {
+                    if (last30.indexOf(" " + tags[key]) > 0 || last30.indexOf(tags[key]) == 0) {
+                        // Find the matched tag, ensure it has a space beforehand
+                        // Then the name is what's after that.
+                        Drupal.settings.tag_user.tagged_user = last30.substr(last30.indexOf(tags[key]));
+                        Drupal.settings.tag_user.tagging = true;
                     }
                 }
+                this.populatePopup();
 
-                    default: // All other keys.
-                        return true;
-
+                return true;
         }
     };
 
