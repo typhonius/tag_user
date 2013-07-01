@@ -1,6 +1,4 @@
-
 (function ($) {
-// TODO can we use tagged user and tagging like db is used in this file
     /**
      * Attaches the autocomplete behavior to all required fields.
      */
@@ -8,11 +6,11 @@
         attach: function (context, settings) {
             var acdb = [];
             $('input.tag-user', context).once('tag-user', function () {
+                var tag_user = new Drupal.tag_user();
                 var uri = this.value;
                 if (!acdb[uri]) {
                     acdb[uri] = new Drupal.tag_userACDB(uri);
                 }
-                // #tag-user
                 var $input = $('#' + this.id.substr(0, this.id.length - 13))
                     .attr('autocomplete', 'OFF')
                     .attr('aria-autocomplete', 'list');
@@ -23,7 +21,7 @@
                     .append($('<span class="element-invisible" aria-live="assertive"></span>')
                         .attr('id', $input.attr('id') + '-autocomplete-aria-live')
                     );
-                new Drupal.tag_userAC($input, acdb[uri]);
+                new Drupal.tag_userAC($input, acdb[uri], tag_user);
             });
         }
     };
@@ -41,16 +39,17 @@
     /**
      * An AutoComplete object.
      */
-    Drupal.tag_userAC = function ($input, db) {
+    Drupal.tag_userAC = function ($input, db, tag_user) {
         var ac = this;
         this.input = $input;
         this.ariaLive = $('#' + this.input.id + '-autocomplete-aria-live');
         this.db = db;
+        this.tag_user = tag_user;
 
         $input
             .keydown(function (event) { return ac.onkeydown(this, event); })
-            .keyup(function (event) { ac.onkeyup(this, event); });
-           // .blur(function () { ac.hidePopup(); ac.db.cancel(); });
+            .keyup(function (event) { ac.onkeyup(this, event); })
+            .blur(function () { ac.hidePopup(); ac.db.cancel(); });
 
     };
 
@@ -70,7 +69,7 @@
                 return false;
             case 13: // enter
                 if (input.value.length > 0 && !input.readOnly) {
-                    if (Drupal.settings.tag_user.tagging) {
+                    if (this.tag_user.tagging) {
                         this.hidePopup(e.keyCode);
                         return false;
                     }
@@ -103,13 +102,10 @@
             case 40: // Down arrow.
                 return true;
 
+            case 27: // Esc.
+                this.hidePopup(e.keyCode);
             case 9:  // Tab.
             case 13: // Enter.
-                return true;
-            case 27: // Esc. // TODO allow it to clear the thing on escape
-                Drupal.settings.tag_user.tagged_user = "";
-                Drupal.settings.tag_user.tagging = false;
-                this.hidePopup();
                 return true;
 
             default: // All other keys.
@@ -117,14 +113,14 @@
                 // a @ or + (user defined eventually)
                 var cursor = input.selectionStart;
                 var last30 = input.value.substr((Math.max(cursor - 30, 0)), cursor);
-                var tags = "@,+";
+                var tags = Drupal.settings.tag_user_tag_symbols; // TODO allow the user to change this
                 tags = tags.split(",");
                 for (var key in tags) {
                     if (last30.indexOf(" " + tags[key]) > 0 || last30.indexOf(tags[key]) == 0) {
                         // Find the matched tag, ensure it has a space beforehand
                         // Then the name is what's after that.
-                        Drupal.settings.tag_user.tagged_user = last30.substr(last30.indexOf(tags[key]));
-                        Drupal.settings.tag_user.tagging = true;
+                        this.tag_user.tagged_user = last30.substr(last30.indexOf(tags[key]));
+                        this.tag_user.tagging = true;
                     }
                 }
                 this.populatePopup();
@@ -137,8 +133,6 @@
      * Puts the currently highlighted suggestion into the autocomplete field.
      */
     Drupal.tag_userAC.prototype.select = function (node) {
-    // change the tagged user var to the value and then replace that value with
-    // the link
         this.input.value = $(node).data('autocompleteValue');
     };
 
@@ -191,14 +185,12 @@
      * Hides the autocomplete suggestions.
      */
     Drupal.tag_userAC.prototype.hidePopup = function (keycode) {
-        // Select item if the right key or mousebutton was pressed.
-        // TODO what about enter
         if (this.selected && ((keycode && keycode != 46 && keycode != 8 && keycode != 27) || !keycode)) {
             var text = this.input[0].value;
-            text = text.replace(Drupal.settings.tag_user.tagged_user, $(this.selected).data('autocompleteValue'));
+            text = text.replace(this.tag_user.tagged_user, $(this.selected).data('autocompleteValue'));
             this.input[0].value = text;
-            Drupal.settings.tag_user.tagged_user = "";
-            Drupal.settings.tag_user.tagging = false;
+            this.tag_user.tagged_user = "";
+            this.tag_user.tagging = false;
         }
         // Hide popup.
         var popup = this.popup;
@@ -214,38 +206,34 @@
      * Positions the suggestions popup and starts a search.
      */
     Drupal.tag_userAC.prototype.populatePopup = function () {
-        if (Drupal.settings.tag_user.tagging == true) {
-        var $input = $(this.input);
-        var position = $input.position();
-        // Show popup.
-        if (this.popup) {
-            $(this.popup).remove();
-        }
-        this.selected = false;
-        this.popup = $('<div id="autocomplete"></div>')[0];
-        this.popup.owner = this;
-        $(this.popup).css({
-            top: parseInt(position.top + this.input.offsetHeight, 10) + 'px',
-            left: parseInt(position.left, 10) + 'px',
-            width: $input.innerWidth() + 'px',
-            display: 'none'
-        });
-        $input.before(this.popup);
+        //if (this.tag_user.tagging == true) {
+            var $input = $(this.input);
+            var position = $input.position();
+            // Show popup.
+            if (this.popup) {
+                $(this.popup).remove();
+            }
+            this.selected = false;
+            this.popup = $('<div id="autocomplete"></div>')[0];
+            this.popup.owner = this;
+            $(this.popup).css({
+                top: parseInt(position.top + this.input.offsetHeight, 10) + 'px',
+                left: parseInt(position.left, 10) + 'px',
+                width: $input.innerWidth() + 'px',
+                display: 'none'
+            });
+            $input.before(this.popup);
 
-        // Do search.
-        this.db.owner = this;
-        this.db.search(this.input.value);
-        }
+            // Do search.
+            this.db.owner = this;
+            this.db.search(this.tag_user.tagged_user);
+        //}
     };
 
     /**
      * Fills the suggestion popup with any matches received.
      */
     Drupal.tag_userAC.prototype.found = function (matches) {
-        // If no value in the textfield, do not show the popup.
-        if (!Drupal.settings.tag_user.tagged_user.length) {
-            return false;
-        }
 
         // Prepare matches.
         var ul = $('<ul></ul>');
@@ -288,6 +276,14 @@
     };
 
     /**
+     * A Tag User object.
+     */
+    Drupal.tag_user = function () {
+        this.tagging = false;
+        this.tagged_user = "";
+    };
+
+    /**
      * An AutoComplete DataBase object.
      */
     Drupal.tag_userACDB = function (uri) {
@@ -301,11 +297,13 @@
      */
     Drupal.tag_userACDB.prototype.search = function (searchString) {
         var db = this;
-        // Get rid of the + or @ before searching
-        this.searchString = Drupal.settings.tag_user.tagged_user.slice(1);
+
+        // Slice off the @ / + from the front
+        this.searchString = searchString.slice(1);
 
         // See if this string needs to be searched for anyway.
-        searchString = Drupal.settings.tag_user.tagged_user.slice(1).replace(/^\s+|\s+$/, '');
+        searchString = this.searchString.replace(/^\s+|\s+$/, '');
+
         if (searchString.length <= 0 ||
             searchString.charAt(searchString.length - 1) == ',') {
             return;
@@ -350,8 +348,6 @@
      * Cancels the current autocomplete request.
      */
     Drupal.tag_userACDB.prototype.cancel = function () {
-        // TODO not sure if this is a good or bad idea.
-        //Drupal.settings.tag_user.tagging = false;
         if (this.owner) this.owner.setStatus('cancel');
         if (this.timer) clearTimeout(this.timer);
         this.searchString = '';

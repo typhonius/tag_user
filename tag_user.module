@@ -11,6 +11,7 @@
  * @return mixed
  */
 function tag_user_menu() {
+  $items = array();
   $items['tag_user/autocomplete'] = array(
     'title' => 'Tag User autocomplete',
     'page callback' => 'tag_user_autocomplete',
@@ -18,8 +19,28 @@ function tag_user_menu() {
     'access arguments' => array('access user profiles'),
     'type' => MENU_CALLBACK,
   );
+  $items['admin/config/content/tag_user'] = array(
+    'title' => 'Tag User',
+    'description' => 'Access administrative pages for tag user.',
+    'type' => MENU_NORMAL_ITEM,
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('tag_user_admin_settings_page'),
+    'access arguments' => array('administer filters'),
+  );
 
   return $items;
+}
+
+function tag_user_admin_settings_page() {
+  $form = array();
+  $form['tag_user_tag_symbols'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Tag Symbols'),
+    '#description' => t('Enter a comma separated list of symbols that may be used by users to tag other users in content'),
+    '#default_value' => variable_get('tag_user_tag_symbols', '@,+'),
+  );
+
+  return system_settings_form($form);
 }
 
 /**
@@ -96,7 +117,7 @@ function tag_user_field_widget_form_alter(&$element, &$form_state, $context) {
       // Eventually alter the Drupal.settings... in js for an object instantiated in the js
       array(
         'type' => 'setting',
-        'data' => array('tag_user' => array('tagging' => FALSE, 'tagged_user' => '')),
+        'data' => array('tag_user_tag_symbols' => variable_get('tag_user_tag_symbols', '@,+')),
       ),
     );
     $element['#tag_user_enabled'] = TRUE;
